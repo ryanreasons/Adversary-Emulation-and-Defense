@@ -1,0 +1,10 @@
+<!-- Local rules -->
+<group name="local,windows,tuning,">
+  <!-- Ryan: This rule silences Adobe Photoshop Express crash telemetry noise that floods rule 67027 (process creation). -->
+  <!-- Ryan: It only matches when the event contains CRWindowsClientService.exe, so other 4688 process creation alerts still work normally. -->
+  <rule id="110067" level="0">
+    <if_sid>67027</if_sid>
+    <match>CRWindowsClientService\.exe</match>
+    <description>Tuning: Silence Adobe CRWindowsClientService process creation telemetry noise.</description>
+  </rule>
+</group>

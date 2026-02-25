@@ -1,0 +1,15 @@
+<group name="local,windows,sysmon,process_creation,">
+
+  <rule id="100067" level="10">
+    <decoded_as>json</decoded_as>
+
+    <!-- Windows Security 4688: process creation -->
+    <field name="win.system.eventID">4688</field>
+
+    <!-- Match the full path but only care about the executable name -->
+    <field name="win.eventdata.newProcessName" type="pcre2">(?i)\\CRWindowsClientService\.exe$</field>
+
+    <description>Windows process creation (4688): CRWindowsClientService.exe launched</description>
+  </rule>
+
+</group>
