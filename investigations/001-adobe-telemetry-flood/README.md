@@ -1,61 +1,91 @@
-# Investigation 001 - Adobe telemetry flood (CRWindowsClientService.exe) - Wazuh tuning
+# Investigation 001 – Adobe CRWindowsClientService Telemetry Flood
 
-## What happened
-My Windows endpoint started generating noisy process creation telemetry around `CRWindowsClientService.exe`. It was not actionable in my environment, but it was loud enough to drown out real signals and waste time during triage.
+## Situation Overview
 
-This investigation documents the tuning I put in place so the noise stops, while normal Windows process creation detection remains intact.
+This investigation started because Windows Security 4688 process creation events were flooding Wazuh. The executable responsible was CRWindowsClientService.exe, part of Adobe Photoshop Express crash telemetry handling.
 
-## Root cause (practical)
-The endpoint was repeatedly emitting process creation activity tied to Adobe’s `CRWindowsClientService.exe` (commonly observed with Adobe tooling or related components). Wazuh was correctly seeing the activity, but in my environment it was operational noise.
+The activity itself was not malicious. That was not the issue. The issue was alert fatigue and signal degradation inside the SIEM. When noise increases, meaningful detection decreases. That is not acceptable in a serious detection stack.
 
-So the correct move here was tuning, not “disabling detection.”
+The objective was precise suppression. Not broad filtering. Not disabling 4688. Surgical tuning only.
 
-## Final solution (what is deployed)
-Two Wazuh rules exist and they must NOT share an ID.
+---
 
-1) A **high-signal detection rule** that matches Windows Security Event ID `4688` when the process name ends in `CRWindowsClientService.exe`.
-   - File: `detections/tuning/windows-noise/wazuh/100067-crwindowsclientservice.xml`
-   - Rule ID: `100067`
+## Root Cause
 
-2) A **local suppression rule** that reduces alerting for the noisy pattern by targeting the parent/related SID and matching the process name string.
-   - File: `detections/tuning/windows-noise/wazuh/local_rules.xml`
-   - Rule ID: `110067`
+Two architectural problems were identified.
 
-Important detail: Wazuh will warn and behave unpredictably if rule IDs collide. Duplicate rule IDs trigger warnings like:
-`Rule ID '100067' is duplicated. Only the first occurrence will be considered.`
+First, a custom detection rule (100067) was created to detect CRWindowsClientService.exe execution.
 
-The fix was to keep the detection rule as `100067` and move the suppression rule to `110067`.
+Second, a suppression rule in local_rules.xml was mistakenly assigned the same rule ID (100067).
 
-## Why the suppression rule is safe
-The suppression rule is tightly scoped:
-- It only triggers when the event contains `CRWindowsClientService.exe`
-- It is tied to the specific detection SID (`67027`) it was flooding
-- It does NOT shut off general 4688 monitoring or other process creation visibility
+Wazuh only loads the first instance of a duplicated rule ID. Everything after that becomes undefined behavior. The manager correctly generated warning 7612 indicating rule duplication.
 
-This is what I want in a real SOC workflow: reduce junk without blinding myself.
+This was not a syntax problem. It was rule lifecycle management.
 
-## Validation steps (manager-side)
-On the Wazuh manager (containerized on Dilbert), I validated this in two ways:
+---
 
-1) Confirm the live rules do not contain duplicate IDs:
-- `100067` should only exist once in the live rules paths
-- `110067` should exist in the local rules file
+## Final Detection Architecture
 
-2) Confirm logtest behaves correctly:
-- The detection rule still fires for a sample `4688` event with `CRWindowsClientService.exe`
-- No duplicated-rule warning appears during runtime after restart
+### High-Fidelity Detection Rule
 
-## Export / repo sync workflow
-I export the deployed rules from the Wazuh manager container to the Dilbert host, then copy them to this repo so GitHub matches production.
+File:
+detections/tuning/windows-noise/wazuh/100067-crwindowsclientservice.xml
 
-This prevents “documentation drift” where the repo is stale but production is different.
+- Rule ID: 100067
+- Level: 10
+- Matches Windows Security Event ID 4688
+- Uses PCRE2 pattern:
+  (?i)\\CRWindowsClientService\.exe$
 
-## Files related to this investigation
-- `detections/tuning/windows-noise/wazuh/100067-crwindowsclientservice.xml`
-- `detections/tuning/windows-noise/wazuh/local_rules.xml`
+This rule explicitly detects execution of the Adobe crash service binary. Nothing more. Nothing less.
 
-## Closure criteria
-This investigation is “done” when:
-- Wazuh manager shows no duplicate rule ID warnings for `100067`
-- My endpoint stops flooding alerts for this pattern
-- Other process creation alerts remain normal and actionable
+---
+
+### Targeted Suppression Rule
+
+File:
+detections/tuning/windows-noise/wazuh/local_rules.xml
+
+- Rule ID: 110067
+- Level: 0
+- Uses <if_sid>67027</if_sid>
+- Matches:
+  CRWindowsClientService\.exe
+
+This suppresses only the generic 67027 process creation alert when the executable is Adobe crash telemetry.
+
+All other 4688 detections remain intact.
+
+This preserves detection integrity while eliminating operational noise.
+
+---
+
+## Validation Process
+
+- Confirmed rule load order via ossec.conf ruleset section
+- Removed duplicated rule IDs
+- Moved rule backups outside live rules directory
+- Restarted Wazuh manager cleanly
+- Verified no new 7612 duplicate warnings in ossec.log
+- Replayed test event using wazuh-logtest
+- Confirmed detection rule fires correctly
+- Confirmed suppression rule behaves as designed
+- Exported final production rules from container
+- Synced repository to deployed state
+- Enforced LF line endings via .gitattributes
+
+No assumptions. All verified.
+
+---
+
+## Final State
+
+- Duplicate rule ID issue fully resolved
+- Detection rule stable and active
+- Suppression rule isolated and controlled
+- Production and Git repository synchronized
+- Investigation formally documented
+
+This was not just noise cleanup. This was controlled detection engineering with proper rule hygiene and lifecycle management.
+
+Status: Closed
