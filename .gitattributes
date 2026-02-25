@@ -1,5 +1,8 @@
-# Wazuh rules should stay LF (Linux-friendly) even when edited on Windows.
-*.xml text eol=lf
+# Ensure the attributes file itself is LF so Windows does not fight the repo policy.
+.gitattributes text eol=lf
+
+# Wazuh rules and infrastructure files should stay LF (Linux-friendly) even when edited on Windows.
+*.xml  text eol=lf
 *.conf text eol=lf
 *.yml  text eol=lf
 *.yaml text eol=lf
