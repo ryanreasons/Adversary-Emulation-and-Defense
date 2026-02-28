@@ -14,3 +14,4 @@ I implemented a Regex-based filter to match the process name at the end of the p
   <if_sid>67027</if_sid>
   <field name="win.eventdata.newProcessName" type="pcre2">postgres\.exe$</field>
 </rule>
+
