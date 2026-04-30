@@ -1,30 +1,5 @@
 <!-- Local rules -->
-<group name="local,windows,tuning,">
-  <!-- Ryan: This rule silences Adobe Photoshop Express crash telemetry noise that floods rule 67027 (process creation). -->
-  <!-- Ryan: It only matches when the event contains CRWindowsClientService.exe, so other 4688 process creation alerts still work normally. -->
-  <rule id="110067" level="0">
-    <if_sid>67027</if_sid>
-    <match>CRWindowsClientService\.exe</match>
-    <description>Tuning: Silence Adobe CRWindowsClientService process creation telemetry noise.</description>
-  </rule>
-
-  <!-- Ryan: MinIO internal metadata churns constantly. I am suppressing alerts only for .minio.sys under recruiting-memory so the rest of FIM stays intact. -->
-  <!-- Ryan: Suppress noisy MinIO .minio.sys syscheck events for recruiting-memory -->
-
-  <!-- Ryan: Suppress noisy MinIO .minio.sys syscheck events for recruiting-memory -->
-
-  
-  <!-- Ryan: Suppress noisy MinIO .minio.sys syscheck events for recruiting-memory -->
-
-  
-  <!-- Ryan: Suppress noisy MinIO .minio.sys syscheck events for recruiting-memory -->
-
-  
-  <!-- Ryan: Suppress noisy MinIO .minio.sys syscheck events for recruiting-memory -->
-
-  
-  <!-- Ryan: Suppress noisy MinIO .minio.sys syscheck events for recruiting-memory -->
-
+<group name="local,linux,syscheck,minio,tuning,">
   <!-- Ryan: Suppress MinIO internal FIM churn under /.minio.sys for recruiting-memory.
        Ryan: I am reducing alert fatigue while keeping syscheck/FIM enabled everywhere. -->
 
