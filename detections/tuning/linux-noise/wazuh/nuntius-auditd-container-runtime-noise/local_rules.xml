@@ -1,0 +1,52 @@
+<!-- Candidate local rules for Nuntius auditd container runtime noise.
+     Ryan validated the decoded auditd field names with wazuh-logtest before loading the production candidate. -->
+<group name="local,linux,auditd,container-runtime,tuning,">
+  <rule id="111792" level="0">
+    <if_sid>80792</if_sid>
+    <field name="audit.key">^audit-wazuh-c$</field>
+    <field name="audit.auid">^4294967295$</field>
+    <field name="audit.exe" type="pcre2">(^/usr/bin/runc$|^/runc$)</field>
+    <description>Ryan: Candidate suppress auditd runc container runtime noise on Nuntius.</description>
+  </rule>
+
+  <rule id="111793" level="0">
+    <if_sid>80792</if_sid>
+    <field name="audit.key">^audit-wazuh-c$</field>
+    <field name="audit.auid">^4294967295$</field>
+    <field name="audit.exe">^/usr/libexec/docker/docker-init$</field>
+    <description>Ryan: Candidate suppress auditd docker-init container runtime noise on Nuntius.</description>
+  </rule>
+
+  <rule id="111794" level="0">
+    <if_sid>80792</if_sid>
+    <field name="audit.key">^audit-wazuh-c$</field>
+    <field name="audit.cwd">^/var/lib/rancher/k3s/server$</field>
+    <field name="audit.exe">^/usr/sbin/xtables-nft-multi$</field>
+    <description>Ryan: Candidate suppress auditd k3s xtables helper noise on Nuntius.</description>
+  </rule>
+
+  <rule id="111795" level="0">
+    <if_sid>80792</if_sid>
+    <field name="audit.key">^audit-wazuh-c$</field>
+    <field name="audit.cwd">^/var/lib/rancher/k3s/server$</field>
+    <field name="audit.exe" type="pcre2">^/var/lib/rancher/k3s/.*/bin/ipset$</field>
+    <description>Ryan: Candidate suppress auditd k3s ipset helper noise on Nuntius.</description>
+  </rule>
+
+  <rule id="111796" level="0">
+    <if_sid>80792</if_sid>
+    <field name="audit.key">^audit-wazuh-c$</field>
+    <field name="audit.auid">^4294967295$</field>
+    <field name="audit.exe">^/usr/local/bin/pg_isready$</field>
+    <description>Ryan: Candidate suppress auditd docker pg_isready healthcheck noise on Nuntius.</description>
+  </rule>
+
+  <rule id="111797" level="0">
+    <if_sid>80792</if_sid>
+    <field name="audit.key">^audit-wazuh-c$</field>
+    <field name="audit.auid">^4294967295$</field>
+    <field name="audit.exe">^/usr/local/bin/redis-cli$</field>
+    <field name="audit.execve.a3">^ping$</field>
+    <description>Ryan: Candidate suppress auditd docker redis-cli healthcheck noise on Nuntius.</description>
+  </rule>
+</group>
