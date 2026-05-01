@@ -1,0 +1,57 @@
+<!-- Candidate local rules for Nuntius auditd authentik healthcheck noise.
+     These rules intentionally match decoded auditd fields rather than raw audit text. -->
+<group name="local,linux,auditd,authentik,tuning,">
+  <rule id="111798" level="0">
+    <if_sid>80792</if_sid>
+    <field name="audit.key">^audit-wazuh-c$</field>
+    <field name="audit.auid">^4294967295$</field>
+    <field name="audit.cwd">^/$</field>
+    <field name="audit.exe">^/usr/bin/env$</field>
+    <field name="audit.execve.a2">^/lifecycle/ak$</field>
+    <field name="audit.execve.a3">^healthcheck$</field>
+    <description>Ryan: Candidate suppress auditd authentik env healthcheck noise on Nuntius.</description>
+  </rule>
+
+  <rule id="111799" level="0">
+    <if_sid>80792</if_sid>
+    <field name="audit.key">^audit-wazuh-c$</field>
+    <field name="audit.auid">^4294967295$</field>
+    <field name="audit.cwd">^/$</field>
+    <field name="audit.exe">^/usr/bin/bash$</field>
+    <field name="audit.execve.a1">^/lifecycle/ak$</field>
+    <field name="audit.execve.a2">^healthcheck$</field>
+    <description>Ryan: Candidate suppress auditd authentik bash healthcheck noise on Nuntius.</description>
+  </rule>
+
+  <rule id="111800" level="0">
+    <if_sid>80792</if_sid>
+    <field name="audit.key">^audit-wazuh-c$</field>
+    <field name="audit.auid">^4294967295$</field>
+    <field name="audit.cwd">^/$</field>
+    <field name="audit.exe">^/usr/bin/mkdir$</field>
+    <field name="audit.execve.a1">^-p$</field>
+    <field name="audit.execve.a2">^/dev/shm//authentik_prometheus_tmp$</field>
+    <description>Ryan: Candidate suppress auditd authentik prometheus temp directory healthcheck noise on Nuntius.</description>
+  </rule>
+
+  <rule id="111801" level="0">
+    <if_sid>80792</if_sid>
+    <field name="audit.key">^audit-wazuh-c$</field>
+    <field name="audit.auid">^4294967295$</field>
+    <field name="audit.cwd">^/$</field>
+    <field name="audit.exe">^/usr/bin/cat$</field>
+    <field name="audit.execve.a1">^/dev/shm//authentik-mode$</field>
+    <description>Ryan: Candidate suppress auditd authentik mode file healthcheck noise on Nuntius.</description>
+  </rule>
+
+  <rule id="111802" level="0">
+    <if_sid>80792</if_sid>
+    <field name="audit.key">^audit-wazuh-c$</field>
+    <field name="audit.auid">^4294967295$</field>
+    <field name="audit.cwd">^/$</field>
+    <field name="audit.exe">^/usr/bin/authentik$</field>
+    <field name="audit.execve.a1">^healthcheck$</field>
+    <field name="audit.execve.a2">^worker$</field>
+    <description>Ryan: Candidate suppress auditd authentik worker healthcheck noise on Nuntius.</description>
+  </rule>
+</group>
