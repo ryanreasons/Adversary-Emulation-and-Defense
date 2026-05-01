@@ -1,0 +1,29 @@
+<!-- Candidate local rules for Nuntius auditd busybox Redis healthcheck noise.
+     These rules intentionally match decoded auditd fields rather than raw audit text. -->
+<group name="local,linux,auditd,busybox,redis,tuning,">
+  <rule id="111803" level="0">
+    <if_sid>80792</if_sid>
+    <field name="audit.key">^audit-wazuh-c$</field>
+    <field name="audit.auid">^4294967295$</field>
+    <field name="audit.cwd">^/data$</field>
+    <field name="audit.exe">^/bin/busybox$</field>
+    <field name="audit.command">^sh$</field>
+    <field name="audit.execve.a0">^/bin/sh$</field>
+    <field name="audit.execve.a1">^-c$</field>
+    <match>a2=72656469732D636C69202D612022247B52454449535F50415353574F52447D222070696E67207C2067726570202D7120504F4E47</match>
+    <description>Ryan: Candidate suppress auditd busybox Redis healthcheck shell wrapper noise on Nuntius.</description>
+  </rule>
+
+  <rule id="111804" level="0">
+    <if_sid>80792</if_sid>
+    <field name="audit.key">^audit-wazuh-c$</field>
+    <field name="audit.auid">^4294967295$</field>
+    <field name="audit.cwd">^/data$</field>
+    <field name="audit.exe">^/bin/busybox$</field>
+    <field name="audit.command">^grep$</field>
+    <field name="audit.execve.a0">^grep$</field>
+    <field name="audit.execve.a1">^-q$</field>
+    <field name="audit.execve.a2">^PONG$</field>
+    <description>Ryan: Candidate suppress auditd busybox Redis healthcheck grep child noise on Nuntius.</description>
+  </rule>
+</group>
