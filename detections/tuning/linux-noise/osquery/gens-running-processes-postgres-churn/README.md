@@ -73,36 +73,52 @@ The manager `ossec.conf` has the osquery wodle disabled on the manager itself. T
 
 Conclusion: the active `running_processes` schedule is most likely local to `gens`, probably under `/etc/osquery/osquery.conf` or an included osquery pack/config file.
 
-## Access Status
+## Endpoint Deployment
 
-SSH reachability from Ryan's Windows host to `gens` works:
+Ryan applied the source-side osquery change directly on `gens`.
 
-- `10.1.30.200:22`: open
+Endpoint details observed during deployment:
 
-The current temporary `codex` key is not authorized on `gens`:
+- Hostname: `gens`
+- OS: Ubuntu `24.04.4 LTS`
+- osquery version: `5.22.1`
+- osquery service: `osqueryd.service`
+- Config path: `/etc/osquery/osquery.conf`
 
-- `codex@10.1.30.200`: `Permission denied (publickey)`
+Original `running_processes` schedule:
 
-The Wazuh VM could not reach `gens` over SSH:
+```json
+"running_processes": {
+  "query": "SELECT pid, name, path, cmdline, on_disk FROM processes;",
+  "interval": 600
+}
+```
 
-- `alpha -> 10.1.30.200:22`: closed or filtered
+Final deployed `running_processes` schedule:
 
-Because of that, no endpoint-side osquery change was deployed during this pass.
+```json
+"running_processes": {
+  "query": "SELECT pid, name, path, cmdline, on_disk FROM processes;",
+  "interval": 300,
+  "removed": false
+}
+```
 
-## Recommended Source-Side Change
+There was one temporary JSON syntax issue during deployment because the comma after `"interval": 300` was missing. osquery logged the parse failure at `2026-05-02 06:56:36 UTC`. The config was corrected before final restart and validation.
+
+## Source-Side Change
 
 Do not suppress Wazuh rule `24010` broadly.
 
-Preferred first change on `gens`:
+Deployed change on `gens`:
 
 - Keep the `running_processes` query.
-- Increase the interval if it is currently aggressive.
 - Set `removed: false` so osquery stops logging removal churn for short-lived PostgreSQL/session processes.
 - Do not exclude all `postgres` rows unless the reduced schedule still produces unacceptable volume.
 
 This preserves new process visibility while cutting the least useful half of the differential stream.
 
-Candidate osquery schedule fragment:
+Deployed osquery schedule fragment:
 
 ```json
 {
@@ -116,7 +132,7 @@ Candidate osquery schedule fragment:
 }
 ```
 
-Do not blindly replace the whole osquery config with this fragment. Merge this into the existing `running_processes` scheduled query after confirming the current query and interval.
+The interval was changed from `600` to `300` during the endpoint edit. That does not reduce cadence. The meaningful noise-reduction control in this pass is `"removed": false`. If `running_processes` remains too noisy after the removal churn is fixed, the next safer source-side step is to raise the interval back to `600` or higher, or narrow the SQL query, before considering any Wazuh-side tuning.
 
 ## Endpoint Commands To Run On gens
 
@@ -140,7 +156,9 @@ sudo cp -a /etc/osquery/osquery.conf "/etc/osquery/osquery.conf.bak.$(date -u +%
 Validation before restart:
 
 ```bash
-sudo osqueryd --config_path=/etc/osquery/osquery.conf --config_check
+sudo rm -rf /tmp/osquery-configcheck.db
+sudo osqueryd --config_path=/etc/osquery/osquery.conf --database_path=/tmp/osquery-configcheck.db --config_check
+sudo rm -rf /tmp/osquery-configcheck.db
 ```
 
 Restart after config change:
@@ -156,25 +174,78 @@ Local result check:
 sudo tail -n 100 /var/log/osquery/osqueryd.results.log | grep '"name":"running_processes"' || true
 ```
 
-## Wazuh Validation Plan
+## Validation Results
 
-After the endpoint config is changed and osqueryd is restarted, validate from the Wazuh manager:
+Endpoint config validation:
 
-- Compare `gens` rule `24010` `running_processes` volume before and after.
-- Confirm other osquery query names still arrive.
-- Confirm Wazuh rule `24010` itself is still visible for non-noisy osquery results.
+- `python3 -m json.tool /etc/osquery/osquery.conf`: `JSON_OK`
+- `osqueryd --config_check` with a temporary database path: passed
+- `osqueryd.service` restarted cleanly at `2026-05-02 07:20:00 UTC`
+- Post-restart journal showed no config parse errors
 
-Expected result if `removed: false` is accepted:
+Local osquery evidence:
 
-- `removed` events for `running_processes` should drop to `0`.
-- Overall `running_processes` volume should drop significantly.
-- `added` events should remain visible.
+- The post-restart `running_processes` batch at `2026-05-02 07:23:15 UTC` showed `action:"added"` events.
+- No `action:"removed"` events were observed in that post-restart batch.
+
+Wazuh manager validation window:
+
+- Restart point: `2026-05-02T07:20:00Z`
+- Validation query time: `2026-05-02T07:30:05Z`
+- Agent: `gens`
+- Rule: `24010`
+- Query name: `running_processes`
+
+Pre-fix comparison window:
+
+- Window: `2026-05-02T06:50:00Z` to `2026-05-02T07:20:00Z`
+- Total `running_processes` events: `128`
+- `added`: `66`
+- `removed`: `62`
+
+Post-fix validation window:
+
+- Window: `2026-05-02T07:20:00Z` to `2026-05-02T07:30:05Z`
+- Total `running_processes` events: `113`
+- `added`: `113`
+- `removed`: `0`
+
+Other osquery results still arrived after the endpoint change:
+
+- `systemd_units`: `6`
+- `listening_ports`: `4`
+- `logged_in_users`: `2`
+
+Validation conclusion:
+
+- Targeted `removed` churn dropped from `62` events in the pre-fix 30-minute window to `0` after restart.
+- `running_processes` `added` telemetry remained visible.
+- Other osquery query results remained visible.
+- This confirms the source-side change reduced removal churn without disabling osquery ingestion or broadly suppressing Wazuh rule `24010`.
 
 ## Final Decision
 
 This is a source-side osquery schedule issue, not a Wazuh XML issue.
 
-Status: Endpoint change pending SSH access to `gens`.
+Status: Source-side change deployed and live validated.
+
+Residual risk:
+
+- The `added` side of `running_processes` remains visible and still produced `113` events in the first post-restart validation window.
+- Some of that immediate post-restart volume may be osquery re-baselining after service restart.
+- If rule `24010` remains a top offender after this change settles, continue tuning at the osquery source by adjusting interval or query scope. Do not suppress rule `24010` broadly in Wazuh.
+
+Rollback:
+
+```bash
+sudo cp -a /etc/osquery/osquery.conf.bak.<timestamp> /etc/osquery/osquery.conf
+sudo python3 -m json.tool /etc/osquery/osquery.conf >/dev/null
+sudo rm -rf /tmp/osquery-configcheck.db
+sudo osqueryd --config_path=/etc/osquery/osquery.conf --database_path=/tmp/osquery-configcheck.db --config_check
+sudo rm -rf /tmp/osquery-configcheck.db
+sudo systemctl restart osqueryd
+sudo systemctl status osqueryd --no-pager -l
+```
 
 ## References
 

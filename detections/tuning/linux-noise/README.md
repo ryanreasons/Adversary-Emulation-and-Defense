@@ -16,4 +16,4 @@ Not every noisy Wazuh alert should become a Wazuh suppression rule. If the noisy
 
 Current source-side candidates:
 
-- `osquery/gens-running-processes-postgres-churn`: `gens` is producing high-volume osquery `running_processes` differential results, mostly PostgreSQL process churn. Preferred fix is osquery schedule tuning on the endpoint, not broad Wazuh rule suppression.
+- `osquery/gens-running-processes-postgres-churn`: `gens` produced high-volume osquery `running_processes` differential results, mostly PostgreSQL process churn. The first source-side tuning pass deployed `"removed": false` on the endpoint and live validation showed `removed` events drop to `0` while `added` process telemetry and other osquery results remained visible.
