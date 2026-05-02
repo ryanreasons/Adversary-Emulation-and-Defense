@@ -1,0 +1,9 @@
+{
+  "schedule": {
+    "running_processes": {
+      "query": "SELECT pid, name, path, cmdline, on_disk FROM processes;",
+      "interval": 300,
+      "removed": false
+    }
+  }
+}

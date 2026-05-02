@@ -10,3 +10,10 @@ This directory contains documented tuning for Linux-based endpoints within the l
 1. **SSHD:** Filtering repetitive session disconnects from internal vulnerability scanners.
 2. **PAM/Sudo:** Suppressing session 'Open/Close' events for automated service accounts.
 3. **Cron:** Tuning out execution logs from routine system health and backup scripts.
+
+## Source-Side Tuning
+Not every noisy Wazuh alert should become a Wazuh suppression rule. If the noisy layer is the endpoint telemetry source, the preferred fix is to tune that source first.
+
+Current source-side candidates:
+
+- `osquery/gens-running-processes-postgres-churn`: `gens` is producing high-volume osquery `running_processes` differential results, mostly PostgreSQL process churn. Preferred fix is osquery schedule tuning on the endpoint, not broad Wazuh rule suppression.
