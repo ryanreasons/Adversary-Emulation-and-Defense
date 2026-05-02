@@ -1,0 +1,21 @@
+<group name="local,windows,tuning,awl-ram,">
+  <!-- Ryan: Narrow suppression for GitHub CLI helper process churn on AWL-RAM only. -->
+  <!-- Ryan: This does not suppress generic Windows 4688 process creation or other gh.exe children. -->
+  <rule id="111805" level="0">
+    <if_sid>67027</if_sid>
+    <field name="win.system.computer">^AWL-RAM$</field>
+    <field name="win.eventdata.subjectUserName">^reaso$</field>
+    <field name="win.eventdata.parentProcessName" type="pcre2">(?i)^C:\\\\Program Files\\\\GitHub CLI\\\\gh\.exe$</field>
+    <field name="win.eventdata.newProcessName" type="pcre2">(?i)^C:\\\\Windows\\\\System32\\\\tzutil\.exe$</field>
+    <description>Tuning: AWL-RAM GitHub CLI timezone helper process creation noise.</description>
+  </rule>
+
+  <rule id="111806" level="0">
+    <if_sid>67027</if_sid>
+    <field name="win.system.computer">^AWL-RAM$</field>
+    <field name="win.eventdata.subjectUserName">^reaso$</field>
+    <field name="win.eventdata.parentProcessName" type="pcre2">(?i)^C:\\\\Program Files\\\\GitHub CLI\\\\gh\.exe$</field>
+    <field name="win.eventdata.newProcessName" type="pcre2">(?i)^C:\\\\Windows\\\\System32\\\\conhost\.exe$</field>
+    <description>Tuning: AWL-RAM GitHub CLI console host helper process creation noise.</description>
+  </rule>
+</group>
